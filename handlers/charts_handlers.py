@@ -16,7 +16,7 @@ async def grafica_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
 
     if not user_is_allowed(chat_id):
-        await update.message.reply_text("🚫 No estás autorizado para usar este bot.")
+        await update.effective_message.reply_text("🚫 No estás autorizado para usar este bot.")
         return
 
     hoy = datetime.now().date()
@@ -25,7 +25,7 @@ async def grafica_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     datos = categorias_por_rango(chat_id, fecha_str, fecha_str)
 
     if not datos:
-        await update.message.reply_text("📭 Hoy no tienes gastos registrados para graficar.")
+        await update.effective_message.reply_text("📭 Hoy no tienes gastos registrados para graficar.")
         return
 
     categorias = [fila[0] for fila in datos]
@@ -46,7 +46,7 @@ async def grafica_semana(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
 
     if not user_is_allowed(chat_id):
-        await update.message.reply_text("🚫 No estás autorizado para usar este bot.")
+        await update.effective_message.reply_text("🚫 No estás autorizado para usar este bot.")
         return
 
     hoy = datetime.now().date()
@@ -58,7 +58,7 @@ async def grafica_semana(update: Update, context: ContextTypes.DEFAULT_TYPE):
     datos = totales_por_dia(chat_id, fecha_inicio, fecha_fin)
 
     if not datos:
-        await update.message.reply_text("📭 No tienes gastos en los últimos 7 días para graficar.")
+        await update.effective_message.reply_text("📭 No tienes gastos en los últimos 7 días para graficar.")
         return
 
     # mapa fecha -> total
@@ -84,7 +84,7 @@ async def grafica_mes(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
 
     if not user_is_allowed(chat_id):
-        await update.message.reply_text("🚫 No estás autorizado para usar este bot.")
+        await update.effective_message.reply_text("🚫 No estás autorizado para usar este bot.")
         return
 
     hoy = datetime.now().date()
@@ -96,7 +96,7 @@ async def grafica_mes(update: Update, context: ContextTypes.DEFAULT_TYPE):
     datos = categorias_por_rango(chat_id, fecha_inicio, fecha_fin)
 
     if not datos:
-        await update.message.reply_text("📭 No tienes gastos en este mes para graficar.")
+        await update.effective_message.reply_text("📭 No tienes gastos en este mes para graficar.")
         return
 
     categorias = [fila[0] for fila in datos]
