@@ -51,13 +51,13 @@ async def autorizar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     texto_para_usuario = (
         "🎉 ¡Has sido autorizado para usar el bot de gastos!\n\n"
         "Ahora puedes usar estos comandos:\n\n"
-        "📌 **Comandos principales**\n"
+        "📌 <b>Comandos principales</b>\n"
         "• /start — Ver mensaje de bienvenida\n"
         "• /gasto Monto Categoria Descripción\n"
         "   Ej: /gasto 150 comida tacos\n"
         "• /hoy — Ver resumen del día\n"
         "\n"
-        "📊 **Gráficas**\n"
+        "📊 <b>Gráficas</b>\n"
         "• /grafica_hoy — Gráfica por categoría del día\n"
         "• /grafica_semana — Gastos últimos 7 días\n"
         "• /grafica_mes — Gastos del mes\n"
@@ -67,7 +67,7 @@ async def autorizar(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # 7. Intentar enviar mensaje al usuario
     try:
-        await context.bot.send_message(chat_id=target_id, text=texto_para_usuario, parse_mode="Markdown")
+        await context.bot.send_message(chat_id=target_id, text=texto_para_usuario, parse_mode="HTML")
     except Exception as e:
         # Ocurre si el usuario nunca inició chat con el bot
         print(f"No se pudo enviar mensaje a {target_id}: {e}")
