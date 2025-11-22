@@ -1,10 +1,13 @@
 # main.py
 
+import matplotlib.pyplot as plt
+import tempfile
+
 from dotenv import load_dotenv
 load_dotenv()
 
 import os
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 
 from telegram import Update
 from telegram.ext import (
@@ -21,6 +24,8 @@ from db import (
     obtener_chat_ids,
     agregar_gasto,
     resumen_dia,
+    categorias_por_rango,
+    totales_por_dia,
 )
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -144,6 +149,179 @@ async def hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text("\n".join(texto))
 
+async def grafica_hoy(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+
+    if not user_is_allowed(chat_id):
+        await update.message.reply_text("🚫 No estás autorizado para usar este bot.")
+        return
+
+    fecha_hoy = datetime.now().strftime("%Y-%m-%d")
+    datos = categorias_por_rango(chat_id, fecha_hoy, fecha_hoy)
+
+    if not datos:
+        await update.message.reply_text("📭 Hoy no tienes gastos registrados para graficar.")
+        return
+
+    categorias = [fila[0] for fila in datos]
+    montos = [fila[1] for fila in datos]
+
+    # 🎨 Estilo bonito global
+    plt.style.use("seaborn-v0_8")
+
+    # 🎨 Paleta personalizada
+    colores = [
+        "#4e79a7", "#f28e2b", "#e15759", "#76b7b2",
+        "#59a14f", "#edc949", "#af7aa1", "#ff9da7",
+    ]
+
+    plt.figure(figsize=(8, 5))
+
+    # Gráfica de barras
+    plt.bar(
+        categorias,
+        montos,
+        color=colores[:len(categorias)],
+        edgecolor="black",
+        linewidth=1,
+    )
+
+    # Mejoras visuales
+    plt.title(f"Gastos por categoría – {fecha_hoy}", fontsize=16, fontweight="bold")
+    plt.xlabel("Categoría", fontsize=12)
+    plt.ylabel("Monto", fontsize=12)
+    plt.grid(axis="y", linestyle="--", alpha=0.4)
+    plt.xticks(rotation=45, ha="right")
+
+    plt.tight_layout()
+
+    # Guardar en archivo temporal
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+        filename = tmp.name
+        plt.savefig(filename, dpi=200)
+
+    plt.close()
+
+    # Enviar imagen
+    with open(filename, "rb") as f:
+        await context.bot.send_photo(chat_id=chat_id, photo=f)
+
+    os.remove(filename)
+
+async def grafica_semana(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+
+    if not user_is_allowed(chat_id):
+        await update.message.reply_text("🚫 No estás autorizado para usar este bot.")
+        return
+
+    hoy = datetime.now().date()
+    inicio = hoy - timedelta(days=6)  # últimos 7 días (hoy incluido)
+
+    fecha_inicio = inicio.strftime("%Y-%m-%d")
+    fecha_fin = hoy.strftime("%Y-%m-%d")
+
+    datos = totales_por_dia(chat_id, fecha_inicio, fecha_fin)
+
+    if not datos:
+        await update.message.reply_text("📭 No tienes gastos en los últimos 7 días para graficar.")
+        return
+
+    # Crear un mapa fecha -> total
+    mapa_totales = {fila[0]: fila[1] for fila in datos}
+
+    # Lista de todas las fechas del rango, aunque no haya gasto (se muestran como 0)
+    fechas_rango = [
+        (inicio + timedelta(days=i)) for i in range(7)
+    ]
+    labels = [f.strftime("%d/%m") for f in fechas_rango]
+    valores = [mapa_totales.get(f.strftime("%Y-%m-%d"), 0) for f in fechas_rango]
+
+    # 🎨 Estilo
+    plt.style.use("seaborn-v0_8")
+    colores = "#4e79a7"  # un color bonito para la línea
+
+    plt.figure(figsize=(8, 5))
+
+    # Gráfica de línea + marcadores
+    plt.plot(labels, valores, marker="o", linestyle="-", color=colores)
+
+    plt.title("Gastos diarios – últimos 7 días", fontsize=16, fontweight="bold")
+    plt.xlabel("Día", fontsize=12)
+    plt.ylabel("Monto", fontsize=12)
+    plt.grid(axis="y", linestyle="--", alpha=0.4)
+    plt.tight_layout()
+
+    # Guardar en archivo temporal
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+        filename = tmp.name
+        plt.savefig(filename, dpi=200)
+
+    plt.close()
+
+    # Enviar imagen
+    with open(filename, "rb") as f:
+        await context.bot.send_photo(chat_id=chat_id, photo=f)
+
+    os.remove(filename)
+
+async def grafica_mes(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+
+    if not user_is_allowed(chat_id):
+        await update.message.reply_text("🚫 No estás autorizado para usar este bot.")
+        return
+
+    hoy = datetime.now().date()
+    inicio_mes = hoy.replace(day=1)
+
+    fecha_inicio = inicio_mes.strftime("%Y-%m-%d")
+    fecha_fin = hoy.strftime("%Y-%m-%d")
+
+    datos = categorias_por_rango(chat_id, fecha_inicio, fecha_fin)
+
+    if not datos:
+        await update.message.reply_text("📭 No tienes gastos en este mes para graficar.")
+        return
+
+    categorias = [fila[0] for fila in datos]
+    montos = [fila[1] for fila in datos]
+
+    # 🎨 Estilo bonito
+    plt.style.use("seaborn-v0_8")
+    colores = [
+        "#4e79a7", "#f28e2b", "#e15759", "#76b7b2",
+        "#59a14f", "#edc949", "#af7aa1", "#ff9da7",
+    ]
+
+    plt.figure(figsize=(8, 5))
+
+    plt.bar(
+        categorias,
+        montos,
+        color=colores[:len(categorias)],
+        edgecolor="black",
+        linewidth=1,
+    )
+
+    plt.title(f"Gastos por categoría – {hoy.strftime('%m/%Y')}", fontsize=16, fontweight="bold")
+    plt.xlabel("Categoría", fontsize=12)
+    plt.ylabel("Monto", fontsize=12)
+    plt.grid(axis="y", linestyle="--", alpha=0.4)
+    plt.xticks(rotation=45, ha="right")
+    plt.tight_layout()
+
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+        filename = tmp.name
+        plt.savefig(filename, dpi=200)
+
+    plt.close()
+
+    with open(filename, "rb") as f:
+        await context.bot.send_photo(chat_id=chat_id, photo=f)
+
+    os.remove(filename)
+
 
 # ---------- Tarea programada (resumen diario) ----------
 
@@ -196,6 +374,9 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("gasto", gasto))
     app.add_handler(CommandHandler("hoy", hoy))
+    app.add_handler(CommandHandler("grafica_hoy", grafica_hoy))
+    app.add_handler(CommandHandler("grafica_semana", grafica_semana))
+    app.add_handler(CommandHandler("grafica_mes", grafica_mes))
 
     # job diario
     job_queue = app.job_queue

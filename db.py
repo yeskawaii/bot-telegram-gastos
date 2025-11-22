@@ -134,3 +134,46 @@ def resumen_dia(chat_id: int, fecha: str | None = None):
     conn.close()
 
     return total, por_categoria
+
+def categorias_por_rango(chat_id: int, fecha_inicio: str, fecha_fin: str):
+    """
+    Devuelve lista [(categoria, total_categoria), ...] entre fecha_inicio y fecha_fin (YYYY-MM-DD).
+    """
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT categoria, COALESCE(SUM(monto), 0)
+        FROM gastos
+        WHERE chat_id = ?
+          AND fecha BETWEEN ? AND ?
+        GROUP BY categoria
+        ORDER BY SUM(monto) DESC
+        """,
+        (chat_id, fecha_inicio, fecha_fin),
+    )
+    filas = cur.fetchall()
+    conn.close()
+    return filas
+
+def totales_por_dia(chat_id: int, fecha_inicio: str, fecha_fin: str):
+    """
+    Devuelve lista [(fecha, total_dia), ...] entre fecha_inicio y fecha_fin (YYYY-MM-DD),
+    agrupado por fecha.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT fecha, COALESCE(SUM(monto), 0) AS total
+        FROM gastos
+        WHERE chat_id = ?
+          AND fecha BETWEEN ? AND ?
+        GROUP BY fecha
+        ORDER BY fecha ASC
+        """,
+        (chat_id, fecha_inicio, fecha_fin),
+    )
+    filas = cur.fetchall()
+    conn.close()
+    return filas
